@@ -10,19 +10,65 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find((user) => user.username === username);
+  const userAccountNotExists = !!user === false;
+
+  if (userAccountNotExists) {
+    response.status(404);
+  }
+
+  request.user = user;
+  next();
 }
 
+
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const user = request.user;
+
+  const isOnFreePlan = user.pro === false;
+  const isOutOfTheTodosLimit = user.todos.length >= 10;
+
+  if (isOnFreePlan && isOutOfTheTodosLimit) {
+    return response.status(403)
+  }
+
+  next()
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const todo = request.params;
+
+  const user = users.find((user) => user.username === username);
+  const userNotExists = !!user === false;
+
+  const isUuid = validate(todo.id);
+
+  const userTodo = isUuid && user?.todos.find((userTodo) => userTodo.id === todo.id);
+  const todoNotExists = !!userTodo === false;
+
+  if (!userTodo) return response.status(404);
+  if (!user) return response.status(404);
+  if (!isUuid) return response.status(400);
+
+  request.todo = userTodo;
+  request.user = user;
+  next()
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const user = users.find((user) => user.id === id);
+  const userNotExists = !!user === false;
+
+  if (userNotExists) {
+    return response.status(404)
+  }
+
+  request.user = user;
+  next()
 }
 
 app.post('/users', (request, response) => {
@@ -117,7 +163,7 @@ app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, re
 
   user.todos.splice(todoIndex, 1);
 
-  return response.status(204).send();
+  return response.status(204);
 });
 
 module.exports = {
